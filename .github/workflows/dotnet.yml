@@ -21,10 +21,10 @@ jobs:
       with:
         dotnet-version: 8.0.x
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore FakeTrafficMaker.sln
     - name: Build
       run: dotnet build --no-restore FakeTrafficMaker.sln
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal FakeTrafficMaker.sln
     - name: Publish
       run: dotnet publish --no-logo FakeTrafficMaker.sln
