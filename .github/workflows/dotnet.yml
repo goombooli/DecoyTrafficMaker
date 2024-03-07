@@ -27,4 +27,4 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal FakeTrafficMaker.sln
     - name: Publish
-      run: dotnet publish --no-logo FakeTrafficMaker.sln
+      run: dotnet publish -c Release FakeTrafficMaker.sln
