@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  faketrafficmaker.app:
+    image: ${DOCKER_REGISTRY-}faketrafficmakerapp
+    build:
+      context: .
+      dockerfile: FakeTrafficMaker.App/Dockerfile
