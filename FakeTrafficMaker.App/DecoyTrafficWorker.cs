@@ -5,15 +5,15 @@ using System.Net.Http.Headers;
 
 namespace FakeTrafficMaker.App
 {
-    public class Worker : BackgroundService
+    public class DecoyTrafficWorker : BackgroundService
     {
-        private readonly ILogger<Worker> _logger;
+        private readonly ILogger<DecoyTrafficWorker> _logger;
         private readonly Settings _settings;
         private readonly HttpClient _client;
         private readonly SemaphoreSlim _cuncurrentSemaphore;
         private readonly Timer _resourceGarbagaerTimer;
         private readonly CircuitBreakerHandler _circuitBreakerHandler;
-        public Worker(ILogger<Worker> logger, Settings settings, IHttpClientFactory clientFactory)
+        public DecoyTrafficWorker(ILogger<DecoyTrafficWorker> logger, Settings settings, IHttpClientFactory clientFactory)
         {
             _logger = logger;
             _settings = settings;
@@ -31,21 +31,21 @@ namespace FakeTrafficMaker.App
         /// <returns></returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-
             while (!stoppingToken.IsCancellationRequested)
             {
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
-                    _logger.LogInformation("TrafficMaker Worker running at: {time}", DateTimeOffset.Now);
+                    _logger.LogInformation("Decoy TrafficMaker Worker running at: {time}", DateTimeOffset.Now);
                 }
                 // check network availability and internet access first and delay if no internet access or network is not available
-                if (!Utilities.IsNetworkAvailable() || !await Utilities.IsInternetAvailable())
+                if (!await Utilities.IsInternetAvailable())
                 {
                     _logger.LogWarning("FakeTrafficMaker Worker => Network / Internet is not accessible . Sleeping...");
                     await WaitForNextActivationSession(stoppingToken).ConfigureAwait(false);
                     continue;
                 }
-                var tasks = new List<Task>
+
+                List<Task> tasks = new List<Task>
                 {
                     // Send requests to different destinations
                     SendRequestsAsync(stoppingToken),
@@ -53,13 +53,6 @@ namespace FakeTrafficMaker.App
                     UploadAsync(stoppingToken)
                 };
                 await Task.WhenAll(tasks).ConfigureAwait(false);
-
-                //var sendRequestsThread = new Thread(async () => await SendRequestsAsync(stoppingToken));
-                //var uploadThread = new Thread(async () => await UploadAsync(stoppingToken));
-                //sendRequestsThread.Start();
-                //uploadThread.Start();
-                //sendRequestsThread.Join();
-                //uploadThread.Join();
 
                 _logger.LogInformation("All FakeTrafficMaker Tasks Completed.");
                 await WaitForNextActivationSession(stoppingToken).ConfigureAwait(false);
@@ -75,23 +68,23 @@ namespace FakeTrafficMaker.App
         {
             var activationAgainTime = Random.Shared.Next(_settings.DelayMinutes, _settings.ActivationTimesMultipler[Random.Shared.Next(0, _settings.ActivationTimesMultipler.Length)]);
 
-            if (_settings.ActivationTimes == 1)
+            switch (_settings.ActivationTimes)
             {
-                // add a delay task with minutes
-                _logger.LogInformation("Sleeping for {activationAgainTime} minutes to active again...", activationAgainTime);
-                await Task.Delay(TimeSpan.FromMinutes(activationAgainTime), stoppingToken).ConfigureAwait(false);
-            }
-            else if (_settings.ActivationTimes == 2)
-            {
-                // add a delay task with hours
-                _logger.LogInformation("Sleeping for {activationAgainTime} hours to active again...", activationAgainTime);
-                await Task.Delay(TimeSpan.FromHours(activationAgainTime), stoppingToken).ConfigureAwait(false);
-            }
-            else // 0 or other values
-            {
-                // add a delay task with seconds
-                _logger.LogInformation("Sleeping for {activationAgainTime} seconds to active again...", activationAgainTime);
-                await Task.Delay(TimeSpan.FromSeconds(activationAgainTime), stoppingToken).ConfigureAwait(false);
+                case 1:
+                    // add a delay task with minutes
+                    _logger.LogInformation("Sleeping for {activationAgainTime} minutes to active again...", activationAgainTime);
+                    await Task.Delay(TimeSpan.FromMinutes(activationAgainTime), stoppingToken).ConfigureAwait(false);
+                    break;
+                case 2:
+                    // add a delay task with hours
+                    _logger.LogInformation("Sleeping for {activationAgainTime} hours to active again...", activationAgainTime);
+                    await Task.Delay(TimeSpan.FromHours(activationAgainTime), stoppingToken).ConfigureAwait(false);
+                    break;
+                default:
+                    // add a delay task with seconds
+                    _logger.LogInformation("Sleeping for {activationAgainTime} seconds to active again...", activationAgainTime);
+                    await Task.Delay(TimeSpan.FromSeconds(activationAgainTime), stoppingToken).ConfigureAwait(false);
+                    break;
             }
         }
 
@@ -108,12 +101,13 @@ namespace FakeTrafficMaker.App
                 _logger.LogError("No request destination specified! skipping");
                 return;
             }
-            var shuffledDestinations = destinations.OrderBy(d => Random.Shared.Next()).ToList();
+            List<string> shuffledDestinations = destinations.OrderBy(d => Random.Shared.Next()).ToList();
 
             await Parallel.ForEachAsync(shuffledDestinations.Take(Random.Shared.Next(1, destinations.Count)),
                 new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = _settings.Concurrency }
                 , async (destination, ct) =>
                 {
+                    #region without circut breaker
                     //try
                     //{
                     //    using var response = await _client.GetAsync(destination, cancellationToken).ConfigureAwait(false);
@@ -124,8 +118,11 @@ namespace FakeTrafficMaker.App
                     //catch (Exception ex)
                     //{
                     //    _logger.LogError(ex, "FakeRequester => Error accessing {destination} . Delaying...", destination);
-                    //    await Task.Delay(15000, cancellationToken).ConfigureAwait(false);
+                    //    await Task.Delay(30000, cancellationToken).ConfigureAwait(false);
                     //}
+                    #endregion
+
+                    // make requests in circut breaker mode and failure handling
                     try
                     {
                         await _circuitBreakerHandler.ExecuteAsync(async () =>
@@ -136,10 +133,14 @@ namespace FakeTrafficMaker.App
                                                    response.Content.Headers.ContentLength / 1024);
                         });
                     }
-                    catch (CircuitBreakerOpenException ex)
+                    catch (CircuitBreakerOpenException circuitEx)
                     {
-                        _logger.LogError(ex, "Circuit breaker state is {circuitState}. preventing new operations untill {circuitTimeout}", _circuitBreakerHandler.State, _circuitBreakerHandler.CircuitResetTime);
-                        // Handle open circuit breaker state
+                        _logger.LogError(circuitEx, "FakeRequester => Circuit breaker state is {circuitState}. preventing new operations untill {circuitTimeout}", _circuitBreakerHandler.State, _circuitBreakerHandler.CircuitResetTime);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "FakeRequester => Error accessing {destination}. Delaying...", destination);
+
                     }
                 }).ConfigureAwait(false);
         }
