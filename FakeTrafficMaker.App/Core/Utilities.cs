@@ -90,6 +90,14 @@ namespace FakeTrafficMaker.App.Core
                 {
                     settings.ActivationTimes = int.Parse(args[i + 1]);
                 }
+                else if (args[i] == "--defaultClientUserAgent")
+                {
+                    settings.DefaultClientUserAgent = args[i + 1].ToString();
+                }
+                else if (args[i] == "--defaultClientTimeout")
+                {
+                    settings.DefaultClientTimeout = int.Parse(args[i + 1]);
+                }
                 else
                 //else if (args[i] == "--help")
                 {
@@ -101,11 +109,13 @@ namespace FakeTrafficMaker.App.Core
             return settings;
         }
 
-        private static void PrintCommandLineHelp()
+        public static void PrintCommandLineHelp()
         {
+            Console.WriteLine();
             Console.WriteLine($"Usage Help: ");
-            Console.WriteLine("FakeTrafficMaker.exe|dll --concurrent <max concurrent tasks> --minDataSize <min upload data size> --multiplier <data size multiplier make random sizes> --delay <delay start> --ativationTimes <ativationTimes 0:second | 1:minutes | 3:hour | 4: day>");
-            Console.WriteLine("Example: FakeTrafficMaker.exe|dll --concurrent 2 --minDataSize 100 --multiplier 2 --delay 10 --ativationTimes 0");
+            Console.WriteLine("FakeTrafficMaker.exe | dotnet FakeTrafficMaker.dll --concurrent <max concurrent tasks> --minDataSize <min upload data size> --multiplier <data size multiplier make random sizes> --delay <delay start> --ativationTimes <ativationTimes 0:second | 1:minutes | 3:hour | 4: day>");
+            Console.WriteLine("Example: FakeTrafficMaker.exe | dotnet FakeTrafficMaker.dll --concurrent 2 --minDataSize 5000 --multiplier 5 --delay 10 --ativationTimes 1");
+            Console.WriteLine();
         }
     }
 }
