@@ -1,5 +1,5 @@
-
 # Decoy Traffic Maker
+### NOTE: For personal use and R&D purposes only. <b> Use at your own risk </b>
 
 این برنامه در فواصل زمانی مختلف و بصورت تصادفی، از طریق ارسال درخواست های متعدد و یا آپلود به مقاصد مختلف ترافیکی را روی شبکه شما ایجاد میکند تا تشخیص فغالیت سرور وی پی ان و روش های تانل برای سرویس دهنده ها سخت تر شود.
 
@@ -13,14 +13,16 @@
 ## Installation - طریقه نصب /  پیش نیاز اجرای برنامه
 
 * ابتدا .NET Runtime 8.0 را نصب کنید
-  - Win/Mac: - Install .Net Runtime 8.0: https://dotnet.microsoft.com/en-us/download/dotnet/8.0
+  - Win/Mac: - Install .Net Runtime 8.0:
+    - https://dotnet.microsoft.com/en-us/download/dotnet/8.0
   - Linux: ``` apt update && apt install dotnet-runtime-8.0 ```
-    - اگر مخزن شما شامل دات نت نبود بصورت دستی نصب کنید:  https://learn.microsoft.com/en-us/dotnet/core/install/linux
-* ابتدا آرشیو Release برنامه را دریافت کنید .
+    - اگر مخزن شما شامل دات نت نبود دات نت ۸ را به صورت دستی یا با اسکریپت رسمی مایکروسافت نصب کنید:
+  - https://learn.microsoft.com/en-us/dotnet/core/install/linux
+*  اخرین نسخه Release برنامه را از بخش release ها و یا با دستورات زیر در سرور خود دریافت کنید .
 
-  * نسخه پرتابل / Portable کراس پلتفرم و قابل اجرا در هر سیستم عاملی است.
-
-  * نسخه linux64 مختص سیستم عامل لینوکس است
+    * نسخه پرتابل / Portable کراس پلتفرم و قابل اجرا در هر سیستم عاملی است.
+    * نسخه Self Contained کراس پلتفرم و بدون نیاز به نصب دات نت است ( به زودی)
+    * نسخه linux64 مختص سیستم عامل لینوکس است
 * فایل FakeTrafficMaker.App.exe یا FakeTrafficMaker.App.dll را اجرا کنید
 
 #### You Can See and download all releases and other platform from here:
@@ -69,30 +71,31 @@ https://github.com/goombooli/DecoyTrafficMaker/releases/tag/latest/
 - DefaultClientTimeout: تایم اوت ریکوئست ها بصورت پیشفرض یک دقیقه
 
 - همچنین میتوانید برنامه را با پارامتر اجرا کنید. در اولین اجرای برامه Help CLI نمایش داده میشود ``` dotnet FakeTrafficMaker.App.dll|exe --help ```
-## Run Locally
-Install .Net SDK 8.0 
+
+## Run Locally / توسعه
+Install .Net SDK 8.0, VsCode or Visual Studio 2022
 
 Clone the project
-
 ```bash
   git clone https://github.com/goombooli/DecoyTrafficMaker.git
 ```
-
 Go to the project directory
-
 ```bash
   cd DecoyTrafficMaker
 ```
-
 build program and restore packages
 
 ```bash
   dotnet build FakeTrafficMaker.sln
 ```
-
-Run the program
+Run / Debug the program
 
 ```bash
   dotnet run FakeTrafficMaker.sln
+# Or With Docker: docker compose up -d
 ```
+Publish the program
 
+```bash
+  dotnet publish -c Release FakeTrafficMaker.sln
+```
